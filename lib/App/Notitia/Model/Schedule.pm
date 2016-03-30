@@ -9,7 +9,7 @@ use App::Notitia::Util      qw( assign_link bind button dialog_anchor
                                 set_element_focus slot_claimed slot_identifier
                                 slot_limit_index table_link uri_for_action );
 use Class::Usul::Functions  qw( sum throw );
-use Class::Usul::Time       qw( str2date_time time2str );
+use Class::Usul::Time       qw( time2str );
 use HTTP::Status            qw( HTTP_EXPECTATION_FAILED );
 use Moo;
 
@@ -122,7 +122,7 @@ my $_month_rota_title = sub {
    return $title;
 };
 
-my $_next_month = sub {
+my $_next_link = sub {
    my ($req, $actionp, $rota_name, $month) = @_;
 
    my $date = $month->set_time_zone( 'floating' )->truncate( to => 'day' )
@@ -156,7 +156,7 @@ my $_operators_vehicle = sub {
    return $cache->{ $slot->operator->id } = $label;
 };
 
-my $_prev_month = sub {
+my $_prev_link = sub {
    my ($req, $actionp, $rota_name, $month) = @_;
 
    my $date = $month->set_time_zone( 'floating' )->truncate( to => 'day' )
@@ -475,8 +475,8 @@ my $_get_page = sub {
    my ($self, $req, $name, $date, $todays_events, $rows) = @_;
 
    my $schema  =  $self->schema;
+   my $rota_dt =  $self->local_dt( $date );
    my $limits  =  $self->config->slot_limits;
-   my $rota_dt =  str2date_time $date, 'GMT';
    my $title   =  ucfirst( loc( $req, $name ) ).SPC.loc( $req, 'rota for' ).SPC
                .  $rota_dt->month_name.SPC.$rota_dt->day.SPC.$rota_dt->year;
    my $actionp =  $self->moniker.'/day_rota';
@@ -566,20 +566,20 @@ sub month_rota : Role(any) {
    my $params    =  $req->uri_params;
    my $rota_name =  $params->( 0, { optional => TRUE } ) // 'main';
    my $rota_date =  $params->( 1, { optional => TRUE } ) // time2str '%Y-%m-01';
-   my $month     =  str2date_time $rota_date, 'GMT';
-   my $title     =  $_month_rota_title->( $req, $rota_name, $month );
+   my $rota_dt   =  $self->local_dt( $rota_date );
+   my $title     =  $_month_rota_title->( $req, $rota_name, $rota_dt );
    my $max_slots =  $_month_rota_max_slots->( $self->config->slot_limits );
    my $lcm       =  lcm_for 4, @{ $max_slots };
    my $actionp   =  $self->moniker.'/month_rota';
-   my $prev      =  $_prev_month->( $req, $actionp, $rota_name, $month->clone );
-   my $next      =  $_next_month->( $req, $actionp, $rota_name, $month->clone );
+   my $prev      =  $_prev_link->( $req, $actionp, $rota_name, $rota_dt->clone);
+   my $next      =  $_next_link->( $req, $actionp, $rota_name, $rota_dt->clone);
    my $page      =  {
       fields     => { nav => { next => $next, prev => $prev }, },
       rota       => { headers => $_month_rota_headers->( $req ),
                       lcm => $lcm, max_slots => $max_slots, rows => [] },
       template   => [ 'contents', 'rota', 'month-table' ],
       title      => $title, };
-   my $first     =  $_first_month_rota_date->( $month->clone );
+   my $first     =  $_first_month_rota_date->( $rota_dt->clone );
 
    for my $rno (0 .. 5) {
       my $row = []; my $dayno;
@@ -607,8 +607,8 @@ sub rota_redirect_action : Role(any) {
    my $period    = 'day';
    my $params    = $req->body_params;
    my $rota_name = $params->( 'rota_name' );
-   my $rota_date = str2date_time $params->( 'rota_date' ), 'GMT';
-   my $args      = [ $rota_name, $rota_date->ymd ];
+   my $rota_dt   = $self->local_dt( $params->( 'rota_date' ) );
+   my $args      = [ $rota_name, $rota_dt->ymd ];
    my $location  = uri_for_action $req, $self->moniker."/${period}_rota", $args;
    my $message   = [ $req->session->collect_status_message( $req ) ];
 

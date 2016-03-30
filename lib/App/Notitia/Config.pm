@@ -7,6 +7,7 @@ use Class::Usul::Crypt::Util     qw( decrypt_from_config encrypt_for_config );
 use Class::Usul::File;
 use Class::Usul::Functions       qw( class2appdir create_token );
 use Data::Validation::Constants  qw( );
+use DateTime::TimeZone           qw( );
 use File::DataClass::Types       qw( ArrayRef Bool CodeRef Directory File
                                      HashRef NonEmptySimpleStr
                                      NonNumericSimpleStr
@@ -226,6 +227,10 @@ has 'stash_attr'      => is => 'lazy', isa => HashRef[ArrayRef],
       links           => [ qw( assets css images js ) ],
       request         => [ qw( authenticated host language locale username ) ],
       session         => [ sort keys %{ $_[ 0 ]->session_attr } ], } };
+
+has 'time_zone'       => is => 'lazy', isa => CodeRef,
+   builder            => sub { sub {
+      DateTime::TimeZone->new( name => 'local' ) } };
 
 has 'title'           => is => 'ro',   isa => NonEmptySimpleStr,
    default            => 'Notitia';

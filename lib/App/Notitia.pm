@@ -234,6 +234,8 @@ TODO: Setup a virtualbox environment to do Explorer testing
 
 TODO: Loose traffic lights from rota
 
+TODO: Event post creation is generating same uri across date boundary in BST
+
 =head1 Dependencies
 
 =over 3

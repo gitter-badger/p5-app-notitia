@@ -8,7 +8,7 @@ use App::Notitia::Util      qw( admin_navigation_links bind bind_fields
                                 save_button uri_for_action );
 use Class::Null;
 use Class::Usul::Functions  qw( is_member throw );
-use Class::Usul::Time       qw( str2date_time time2str );
+use Class::Usul::Time       qw( time2str );
 use Moo;
 
 extends q(App::Notitia::Model);
@@ -122,8 +122,8 @@ my $_update_endorsement_from_request = sub {
 
       defined $v or next; $v =~ s{ \r\n }{\n}gmx; $v =~ s{ \r }{\n}gmx;
 
-      length $v and is_member $attr, [ qw( endorsed ) ]
-         and $v = str2date_time( $v, 'GMT' );
+      length $v and is_member $attr, [ 'endorsed' ]
+         and $v = $self->local_dt( $v );
 
       $blot->$attr( $v );
    }

@@ -9,7 +9,7 @@ use App::Notitia::Util      qw( admin_navigation_links bind bind_fields button
                                 save_button uri_for_action );
 use Class::Null;
 use Class::Usul::Functions  qw( create_token is_member throw );
-use Class::Usul::Time       qw( str2date_time time2str );
+use Class::Usul::Time       qw( time2str );
 use Moo;
 
 extends q(App::Notitia::Model);
@@ -207,14 +207,14 @@ my $_write_blog_post = sub {
 sub create_event_action : Role(event_manager) {
    my ($self, $req) = @_;
 
-   my $date     =  str2date_time $req->body_params->( 'event_date' ), 'GMT';
+   my $dt       =  $self->local_dt( $req->body_params->( 'event_date' ) );
    my $event    =  $self->schema->resultset( 'Event' )->new_result
       ( { rota  => 'main', # TODO: Naughty
-          date  => $date->ymd,
+          date  => $dt->ymd,
           owner => $req->username, } );
 
    $self->$_update_event_from_request( $req, $event ); $event->insert;
-   $self->$_write_blog_post( $req, $event, $date->ymd );
+   $self->$_write_blog_post( $req, $event, $dt->ymd );
 
    my $actionp  = $self->moniker.'/event';
    my $location = uri_for_action $req, $actionp, [ $event->uri ];
@@ -299,11 +299,11 @@ sub events : Role(any) {
 
    my $actionp   =  $self->moniker.'/event';
    my $params    =  $req->query_params;
-   my $opts      =  { after  => $params->( 'after',  { optional => TRUE } ),
-                      before => $params->( 'before', { optional => TRUE } ), };
-   my $title     =  $opts->{after } ? 'current_events_heading'
-                 :  $opts->{before} ? 'previous_events_heading'
-                 :                    'events_management_heading';
+   my $after     =  $params->( 'after',  { optional => TRUE } );
+   my $before    =  $params->( 'before', { optional => TRUE } );
+   my $title     =  $after  ? 'current_events_heading'
+                 :  $before ? 'previous_events_heading'
+                 :            'events_management_heading';
    my $page      =  {
       fields     => {
          add     => create_link( $req, $actionp, 'event' ),
@@ -313,6 +313,10 @@ sub events : Role(any) {
       title      => loc( $req, $title ), };
    my $event_rs  =  $self->schema->resultset( 'Event' );
    my $rows      =  $page->{fields}->{rows};
+   my $opts      =  {};
+
+   defined $after  and $opts->{after } = $self->local_dt( $after  );
+   defined $before and $opts->{before} = $self->local_dt( $before );
 
    for my $event (@{ $event_rs->list_all_events( $opts ) }) {
       push @{ $rows },

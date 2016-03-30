@@ -5,7 +5,7 @@ use overload '""' => sub { $_[ 0 ]->_as_string }, fallback => 1;
 use parent   'App::Notitia::Schema::Base';
 
 use App::Notitia::Constants qw( VARCHAR_MAX_SIZE );
-use App::Notitia::Util      qw( date_data_type foreign_key_data_type
+use App::Notitia::Util      qw( foreign_key_data_type
                                 serial_data_type varchar_data_type );
 use Class::Usul::Functions  qw( create_token );
 

@@ -5,7 +5,6 @@ use parent 'DBIx::Class::ResultSet';
 
 use App::Notitia::Constants qw( EXCEPTION_CLASS FALSE NUL TRUE );
 use Class::Usul::Functions  qw( throw );
-use Class::Usul::Time       qw( str2date_time );
 use HTTP::Status            qw( HTTP_EXPECTATION_FAILED );
 
 # Private functions
@@ -84,16 +83,12 @@ sub list_all_events {
    my $parser = $self->result_source->schema->datetime_parser;
    my $after  = delete $opts->{after}; my $before = delete $opts->{before};
 
-   if ($after) {
-      my $date = $parser->format_datetime( str2date_time( $after, 'GMT' ) );
-
-      $where = { 'rota.date' => { '>' => $date } };
+   if (defined $after) {
+      $where = { 'rota.date' => { '>' => $parser->format_datetime( $after ) } };
       $opts->{order_by} //= 'date';
    }
-   elsif ($before) {
-      my $date = $parser->format_datetime( str2date_time( $before, 'GMT' ) );
-
-      $where = { 'rota.date' => { '<' => $date } };
+   elsif (defined $before) {
+      $where = { 'rota.date' => { '<' => $parser->format_datetime( $before ) }};
    }
 
    $opts->{order_by} //= { -desc => 'date' };
